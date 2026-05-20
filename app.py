@@ -1,7 +1,4 @@
 # app.py
-# Arquivo principal da aplicação.
-# Execute com: streamlit run app.py
-
 import streamlit as st
 from model.generator import carregar_modelo, gerar_post
 from utils.prompts import get_prompt
@@ -13,10 +10,9 @@ st.set_page_config(
     layout="centered"
 )
 
-# ── Estilo visual customizado ───────────────────────────────────────────────
+# ── Estilo visual ───────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .main { background-color: #0f0f0f; }
     .stButton > button {
         background: linear-gradient(135deg, #667eea, #764ba2);
         color: white;
@@ -54,9 +50,7 @@ st.title("🚀 Gerador de Posts com IA")
 st.markdown("Crie posts criativos para redes sociais usando **Inteligência Artificial**")
 st.divider()
 
-# ── Carregamento do modelo (só faz isso UMA vez graças ao @st.cache_resource) ──
-# @st.cache_resource garante que o modelo é carregado uma única vez
-# mesmo que o usuário interaja várias vezes com a interface
+# ── Carregamento do modelo (cache — só carrega uma vez) ─────────────────────
 @st.cache_resource(show_spinner="⏳ Carregando modelo de IA... (pode levar 1-2 min na primeira vez)")
 def get_model():
     return carregar_modelo()
@@ -88,46 +82,22 @@ tema = st.text_input(
 
 st.divider()
 
-# ── Parâmetros avançados (ficam escondidos por padrão) ──────────────────────
+# ── Parâmetros avançados ─────────────────────────────────────────────────────
 with st.expander("⚙️ Parâmetros Avançados"):
     st.markdown("Ajuste esses valores para controlar o comportamento da IA:")
-    
     col3, col4 = st.columns(2)
-    
+
     with col3:
-        temperatura = st.slider(
-            "🌡️ Criatividade (Temperatura)",
-            min_value=0.5,
-            max_value=1.4,
-            value=0.9,
-            step=0.05,
-            help="Valores altos = mais criativo e imprevisível. Valores baixos = mais conservador e previsível."
-        )
-        num_posts = st.slider(
-            "🔢 Quantidade de Posts",
-            min_value=1,
-            max_value=3,
-            value=1,
-            help="Gerar mais posts permite comparar e escolher o melhor"
-        )
-    
+        temperatura = st.slider("🌡️ Criatividade (Temperatura)", 0.5, 1.4, 0.9, 0.05,
+            help="Valores altos = mais criativo. Valores baixos = mais conservador.")
+        num_posts = st.slider("🔢 Quantidade de Posts", 1, 3, 1,
+            help="Gerar mais posts permite comparar e escolher o melhor")
+
     with col4:
-        max_tokens = st.slider(
-            "📏 Tamanho do Texto",
-            min_value=40,
-            max_value=200,
-            value=100,
-            step=10,
-            help="Controla o comprimento máximo do post gerado"
-        )
-        top_p = st.slider(
-            "🎲 Diversidade (Top-P)",
-            min_value=0.5,
-            max_value=1.0,
-            value=0.92,
-            step=0.02,
-            help="Controla a variedade de palavras usadas"
-        )
+        max_tokens = st.slider("📏 Tamanho do Texto", 40, 200, 100, 10,
+            help="Controla o comprimento máximo do post gerado")
+        top_p = st.slider("🎲 Diversidade (Top-P)", 0.5, 1.0, 0.92, 0.02,
+            help="Controla a variedade de palavras usadas")
 
 # ── Botão de geração ─────────────────────────────────────────────────────────
 st.markdown("")
@@ -139,10 +109,7 @@ if gerar:
         st.warning("⚠️ Por favor, preencha o campo **Tema do Post** antes de gerar.")
     else:
         with st.spinner("🤖 A IA está criando seu post..."):
-            # Monta o prompt com base nas escolhas do usuário
             prompt = get_prompt(tema, rede_social, tom)
-            
-            # Chama o modelo para gerar os posts
             posts = gerar_post(
                 gerador=gerador,
                 prompt=prompt,
@@ -151,14 +118,13 @@ if gerar:
                 top_p=top_p,
                 num_posts=num_posts,
             )
-        
+
         st.success(f"✅ {len(posts)} post(s) gerado(s) com sucesso!")
         st.markdown("### 📋 Resultado(s)")
-        
+
         for i, post in enumerate(posts, 1):
             st.markdown(f'<div class="badge">Post {i} • {rede_social} • {tom}</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="post-box">{post}</div>', unsafe_allow_html=True)
-            # Botão para copiar o texto
             st.code(post, language=None)
 
 # ── Histórico na sessão ──────────────────────────────────────────────────────
@@ -166,11 +132,7 @@ if "historico" not in st.session_state:
     st.session_state.historico = []
 
 if gerar and tema.strip():
-    st.session_state.historico.append({
-        "tema": tema,
-        "rede": rede_social,
-        "tom": tom
-    })
+    st.session_state.historico.append({"tema": tema, "rede": rede_social, "tom": tom})
 
 if st.session_state.historico:
     st.divider()
