@@ -2,24 +2,20 @@
 # Gerador de Posts para Redes Sociais com IA
 #
 # Stack:
-#   • Hugging Face Transformers 4.55 — tokenização e análise do prompt
-#     (AutoTokenizer do modelo GPT-2 Portuguese)
-#   • Groq API + Llama 3.1 70B — geração de texto (gratuito, sem torch local)
+#   • Hugging Face Transformers 4.55 — tokenização com AutoTokenizer
+#   • Groq API + Llama 3.3 70B — geração de texto (gratuito)
+#   • Dataset próprio (data/dataset.json) — few-shot prompting
 #   • Streamlit — interface interativa
-#
-# Por que esta abordagem:
-#   O Streamlit Cloud (Python 3.14) não suporta torch para inferência local,
-#   mas suporta plenamente a biblioteca transformers para tokenização.
-#   Usamos o tokenizer do HF Transformers para pré-processar o prompt,
-#   contar tokens e enriquecer a entrada — e o Groq para a geração.
 # =============================================================================
 
+import json
+import random
 import streamlit as st
 from groq import Groq
 from transformers import AutoTokenizer
 
-# Modelo HuggingFace usado para tokenização
 HF_MODEL = "pierreguillou/gpt2-small-portuguese"
+DATASET_PATH = "data/dataset.json"
 
 st.set_page_config(
     page_title="Gerador de Posts com IA",
@@ -52,6 +48,11 @@ st.markdown("""
     background: #0a1628; border: 1px solid #444; border-radius: 8px;
     padding: 0.7rem 1rem; font-size: 0.8rem; color: #88aacc; margin-top: 0.5rem;
 }
+.example-box {
+    background: #0f1f10; border-left: 3px solid #4caf50; border-radius: 8px;
+    padding: 0.8rem 1rem; margin: 0.4rem 0; font-size: 0.82rem;
+    color: #c8e6c9; white-space: pre-wrap;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -62,21 +63,40 @@ st.markdown("Crie posts criativos para redes sociais usando **Hugging Face Trans
 st.markdown(f"""
 <div class="info-box">
 🤗 <b>Tokenizer HF:</b> <code>{HF_MODEL}</code> (GPT-2 pré-treinado em português)<br>
-🧠 <b>Geração:</b> Llama 3.1 70B via Groq — arquitetura Transformer<br>
-✅ <b>Custo:</b> 100% gratuito — sem cartão de crédito
+🧠 <b>Geração:</b> Llama 3.3 70B via Groq — arquitetura Transformer<br>
+📚 <b>Dataset:</b> Conjunto próprio de posts para few-shot prompting<br>
+✅ <b>Custo:</b> 100% gratuito
 </div>
 """, unsafe_allow_html=True)
 st.divider()
 
-# ── Carregamento do tokenizer HuggingFace (cache) ─────────────────────────────
+# ── Carregamento do tokenizer HuggingFace ─────────────────────────────────────
 @st.cache_resource(show_spinner="🤗 Carregando tokenizer Hugging Face Transformers...")
 def carregar_tokenizer():
-    """
-    Carrega o AutoTokenizer do modelo GPT-2 Portuguese via Hugging Face Transformers.
-    Este é o uso direto da biblioteca transformers — tokeniza o texto,
-    analisa tokens e enriquece o prompt antes da geração.
-    """
     return AutoTokenizer.from_pretrained(HF_MODEL)
+
+# ── Carregamento do dataset ───────────────────────────────────────────────────
+@st.cache_data
+def carregar_dataset():
+    with open(DATASET_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def buscar_exemplos(dataset, rede, tom, n=2):
+    """
+    Busca exemplos do dataset que correspondem à rede social e tom escolhidos.
+    Esses exemplos são injetados no prompt como few-shot examples —
+    guiando o modelo a gerar no estilo correto.
+    """
+    # Filtra exemplos que combinam rede + tom
+    combinam = [
+        e for e in dataset["exemplos"]
+        if e["rede"] == rede and e["tom"] == tom
+    ]
+    # Se não houver exemplos suficientes, pega só pela rede
+    if len(combinam) < n:
+        combinam = [e for e in dataset["exemplos"] if e["rede"] == rede]
+    # Retorna até n exemplos aleatórios
+    return random.sample(combinam, min(n, len(combinam)))
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -85,18 +105,28 @@ with st.sidebar:
     st.divider()
     st.markdown("### 🤗 Hugging Face Transformers")
     st.markdown(f"""
-**Modelo carregado:**
-`{HF_MODEL}`
+**Modelo:** `{HF_MODEL}`
 
-**O que o Transformers faz aqui:**
-- Tokeniza o prompt com `AutoTokenizer`
-- Conta tokens gerados
-- Analisa o vocabulário do modelo
-- Enriquece o contexto da geração
+**Uso no projeto:**
+- `AutoTokenizer` tokeniza o prompt
+- Conta tokens de entrada e saída
+- Exibe token IDs do modelo GPT-2
 
 **Arquitetura:** GPT-2 (Transformer decoder)
-**Treinamento:** Corpus de textos portugueses
 """)
+    st.divider()
+    st.markdown("### 📚 Dataset")
+    try:
+        ds = carregar_dataset()
+        st.markdown(f"""
+**Arquivo:** `data/dataset.json`
+**Total de exemplos:** {ds['total_exemplos']}
+**Versão:** {ds['versao']}
+
+Exemplos reais usados para **few-shot prompting** — ensinam o modelo o estilo esperado para cada rede e tom.
+""")
+    except Exception:
+        st.warning("Dataset não carregado.")
 
 # ── Formulário ─────────────────────────────────────────────────────────────────
 col1, col2 = st.columns(2)
@@ -118,27 +148,38 @@ with st.expander("⚙️ Parâmetros do Modelo Transformer"):
         num_posts   = st.slider("🔢 Quantidade de Posts", 1, 3, 1)
     with col4:
         max_tokens  = st.slider("📏 Máx. Tokens", 100, 600, 300, 50)
+        usar_dataset = st.toggle("📚 Usar exemplos do dataset", value=True,
+            help="Injeta exemplos reais no prompt para guiar o estilo da geração.")
 
 st.divider()
 
-# ── Prompt ─────────────────────────────────────────────────────────────────────
-def montar_prompt(tema, rede, tom, num):
+# ── Montagem do prompt com few-shot ────────────────────────────────────────────
+def montar_prompt(tema, rede, tom, num, exemplos):
     estilos = {
         "Instagram": "use emojis relevantes e 3 a 5 hashtags no final",
         "Twitter/X": "seja direto e impactante, máximo 280 caracteres",
         "LinkedIn":  "use linguagem profissional com storytelling e encerre com pergunta",
     }
-    plural = f"{num} posts diferentes" if num > 1 else "1 post"
-    numeracao = "Numere como 'Post 1:', 'Post 2:', etc." if num > 1 else ""
-    return f"""Você é especialista em marketing digital e copywriting para redes sociais em português brasileiro.
+    plural     = f"{num} posts diferentes" if num > 1 else "1 post"
+    numeracao  = "Numere como 'Post 1:', 'Post 2:', etc." if num > 1 else ""
 
+    # Few-shot: exemplos do dataset injetados no prompt
+    bloco_exemplos = ""
+    if exemplos:
+        bloco_exemplos = "\n\n**Exemplos do dataset para referência de estilo:**\n"
+        for i, ex in enumerate(exemplos, 1):
+            bloco_exemplos += f"\nExemplo {i} (tema: {ex['tema']}):\n{ex['post']}\n"
+        bloco_exemplos += "\n---\nAgora gere um post original sobre o tema solicitado, no mesmo estilo dos exemplos acima.\n"
+
+    return f"""Você é especialista em marketing digital e copywriting para redes sociais em português brasileiro.
+{bloco_exemplos}
 Crie {plural} criativo(s) para o {rede} com tom {tom} sobre: "{tema}".
 Estilo: {estilos.get(rede, 'linguagem criativa')}.
 {numeracao}
 
 Escreva apenas o(s) post(s), sem introdução ou explicação."""
 
-# ── Geração com HF Transformers + Groq ────────────────────────────────────────
+# ── Botão e geração ────────────────────────────────────────────────────────────
 st.markdown("")
 gerar = st.button("✨ Gerar Post", use_container_width=True)
 
@@ -148,58 +189,62 @@ if gerar:
     elif not tema.strip():
         st.warning("⚠️ Preencha o campo **Tema do Post**.")
     else:
-        prompt = montar_prompt(tema, rede, tom, num_posts)
+        # Carrega dataset e busca exemplos
+        try:
+            ds       = carregar_dataset()
+            exemplos = buscar_exemplos(ds, rede, tom) if usar_dataset else []
+        except Exception:
+            exemplos = []
+
+        prompt = montar_prompt(tema, rede, tom, num_posts, exemplos)
 
         with st.spinner("🤗 Processando com Hugging Face Transformers..."):
-            # ── ETAPA 1: Hugging Face Transformers — tokenização ──────────────
-            tokenizer = carregar_tokenizer()
-
-            # Tokeniza o prompt com o tokenizer do GPT-2 Portuguese (HF Transformers)
-            tokens_entrada = tokenizer(
-                prompt,
-                return_tensors=None,   # sem torch — retorna lista Python
-                add_special_tokens=True
-            )
-            ids_tokens     = tokens_entrada["input_ids"]
+            tokenizer       = carregar_tokenizer()
+            tokens_entrada  = tokenizer(prompt, return_tensors=None, add_special_tokens=True)
+            ids_tokens      = tokens_entrada["input_ids"]
             n_tokens_prompt = len(ids_tokens)
+            tokens_decoded  = [tokenizer.decode([t]) for t in ids_tokens[:8]]
 
-            # Decodifica tokens para mostrar ao usuário (uso real do tokenizer HF)
-            tokens_decodificados = [tokenizer.decode([t]) for t in ids_tokens[:8]]
-
-        with st.spinner("🧠 Gerando post com modelo Transformer (Llama 3.1)..."):
-            # ── ETAPA 2: Groq — geração de texto (gratuita) ───────────────────
+        with st.spinner("🧠 Gerando post com Llama 3.3 (Transformer)..."):
             try:
                 client = Groq(api_key=groq_key)
-                chat = client.chat.completions.create(
+                chat   = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
                         {
                             "role": "system",
-                            "content": "Você é um especialista em marketing de conteúdo. Responda sempre em português brasileiro."
+                            "content": "Você é especialista em marketing de conteúdo. Responda sempre em português brasileiro."
                         },
                         {"role": "user", "content": prompt}
                     ],
                     temperature=float(temperatura),
                     max_tokens=max_tokens,
                 )
-                resposta = chat.choices[0].message.content.strip()
-
-                # Tokeniza a resposta também (HF Transformers)
-                tokens_saida = tokenizer(resposta, return_tensors=None)
+                resposta       = chat.choices[0].message.content.strip()
+                tokens_saida   = tokenizer(resposta, return_tensors=None)
                 n_tokens_saida = len(tokens_saida["input_ids"])
 
-                # ── Resultado ─────────────────────────────────────────────────
                 st.success("✅ Post(s) gerado(s) com sucesso!")
 
-                # Métricas do Tokenizer HF Transformers
+                # Métricas do tokenizer HF
                 st.markdown(f"""
 <div class="token-box">
 🤗 <b>Hugging Face Transformers — Análise de Tokens (GPT-2 Portuguese)</b><br>
 📥 Tokens no prompt: <b>{n_tokens_prompt}</b> &nbsp;|&nbsp;
 📤 Tokens gerados: <b>{n_tokens_saida}</b> &nbsp;|&nbsp;
-🔤 Primeiros tokens: <code>{" | ".join(tokens_decodificados)}</code>
+🔤 Primeiros tokens: <code>{" | ".join(tokens_decoded)}</code>
 </div>
 """, unsafe_allow_html=True)
+
+                # Exemplos usados do dataset
+                if exemplos:
+                    with st.expander(f"📚 {len(exemplos)} exemplo(s) do dataset usados no prompt"):
+                        for ex in exemplos:
+                            st.markdown(
+                                f"**{ex['rede']} · {ex['tom']} · tema: {ex['tema']}**")
+                            st.markdown(
+                                f'<div class="example-box">{ex["post"]}</div>',
+                                unsafe_allow_html=True)
 
                 st.markdown("### 📋 Resultado")
 
@@ -207,26 +252,31 @@ if gerar:
                     partes = [p.strip() for p in resposta.split("Post ") if p.strip()]
                     for i, parte in enumerate(partes, 1):
                         texto = parte[2:].strip() if parte and parte[0].isdigit() else parte
-                        st.markdown(f'<div class="badge">Post {i} · {rede} · {tom}</div>',
+                        st.markdown(
+                            f'<div class="badge">Post {i} · {rede} · {tom}</div>',
                             unsafe_allow_html=True)
-                        st.markdown(f'<div class="post-box">{texto}</div>',
+                        st.markdown(
+                            f'<div class="post-box">{texto}</div>',
                             unsafe_allow_html=True)
                         st.code(texto, language=None)
                 else:
-                    st.markdown(f'<div class="badge">{rede} · {tom} · Transformer</div>',
+                    st.markdown(
+                        f'<div class="badge">{rede} · {tom} · Llama 3.3</div>',
                         unsafe_allow_html=True)
-                    st.markdown(f'<div class="post-box">{resposta}</div>',
+                    st.markdown(
+                        f'<div class="post-box">{resposta}</div>',
                         unsafe_allow_html=True)
                     st.code(resposta, language=None)
 
-                with st.expander("🔍 Detalhes técnicos — Hugging Face Transformers"):
+                with st.expander("🔍 Detalhes técnicos"):
                     st.markdown(f"""
-**Modelo HF carregado:** `{HF_MODEL}`
-**Tokenizer:** `GPT2TokenizerFast` (Hugging Face Transformers)
-**Tokens do prompt:** {n_tokens_prompt}
-**Tokens da resposta:** {n_tokens_saida}
-**Temperatura usada:** {temperatura}
-**Primeiros 8 token IDs:** `{ids_tokens[:8]}`
+**Modelo HF:** `{HF_MODEL}`
+**Tokenizer:** `GPT2TokenizerFast`
+**Tokens prompt:** {n_tokens_prompt}
+**Tokens resposta:** {n_tokens_saida}
+**Temperatura:** {temperatura}
+**Exemplos do dataset usados:** {len(exemplos)}
+**Few-shot ativo:** {"Sim" if usar_dataset and exemplos else "Não"}
 """)
 
             except Exception as e:
@@ -235,8 +285,8 @@ if gerar:
                     st.error("❌ Groq API Key inválida.")
                 elif "429" in err or "rate_limit" in err.lower():
                     st.warning("⏳ Limite atingido. Aguarde 1 minuto e tente novamente.")
-                elif "model" in err.lower() and "not found" in err.lower():
-                    st.error("❌ Modelo não encontrado. Verifique sua conta Groq.")
+                elif "decommissioned" in err or "not found" in err.lower():
+                    st.error("❌ Modelo não disponível. Contate o suporte.")
                 else:
                     st.error(f"❌ Erro: {err}")
 
