@@ -1,10 +1,9 @@
 # app.py
 # Gerador de Posts para Redes Sociais
-# Usa Hugging Face Transformers via Inference API
-# Modelo: pierreguillou/gpt2-small-portuguese (GPT-2 pré-treinado em português)
+# Usa Hugging Face Transformers via huggingface_hub InferenceClient
 
 import streamlit as st
-import requests
+from huggingface_hub import InferenceClient
 
 # ── Configuração da página ───────────────────────────────────────────────────
 st.set_page_config(page_title="Gerador de Posts com IA", page_icon="🚀", layout="centered")
@@ -42,8 +41,8 @@ st.markdown("Crie posts criativos para redes sociais usando **Hugging Face Trans
 
 st.markdown("""
 <div class="info-box">
-🤗 <b>Modelo:</b> <code>pierreguillou/gpt2-small-portuguese</code> — GPT-2 pré-treinado em textos portugueses<br>
-⚡ <b>Tecnologia:</b> Hugging Face Transformers via Inference API (sem instalação local)
+🤗 <b>Modelo:</b> <code>pierreguillou/gpt2-small-portuguese</code> — GPT-2 pré-treinado em português<br>
+⚡ <b>Tecnologia:</b> Hugging Face Transformers via InferenceClient (biblioteca oficial)
 </div>
 """, unsafe_allow_html=True)
 
@@ -58,28 +57,27 @@ with st.sidebar:
     hf_token = st.text_input(
         "🔑 Hugging Face Token",
         type="password",
-        help="Token de acesso do Hugging Face (gratuito)"
+        help="Token de acesso gratuito do Hugging Face"
     )
     st.markdown("**Como obter:**")
     st.markdown("1. Acesse [huggingface.co](https://huggingface.co)")
     st.markdown("2. Crie conta gratuita")
-    st.markdown("3. Vá em **Settings → Access Tokens**")
-    st.markdown("4. Crie um token **Read**")
+    st.markdown("3. **Settings → Access Tokens**")
+    st.markdown("4. Crie um token tipo **Read**")
     st.markdown("---")
     st.markdown("### 📖 Sobre o Modelo")
     st.markdown("""
-    O **GPT-2 Portuguese** é um modelo da família **GPT-2** (Generative Pre-trained Transformer 2)
-    da biblioteca **Hugging Face Transformers**, ajustado com textos em português brasileiro.
+    O **GPT-2 Portuguese** é um modelo **Transformer** (GPT-2) da biblioteca
+    **Hugging Face Transformers**, pré-treinado em textos portugueses.
+    Ele gera texto de forma autoregressiva — prevendo a próxima palavra com base no contexto.
     """)
 
 # ── Formulário principal ──────────────────────────────────────────────────────
 col1, col2 = st.columns(2)
 with col1:
-    rede_social = st.selectbox("📱 Rede Social",
-        ["Instagram", "Twitter/X", "LinkedIn"])
+    rede_social = st.selectbox("📱 Rede Social", ["Instagram", "Twitter/X", "LinkedIn"])
 with col2:
-    tom = st.selectbox("🎭 Tom do Post",
-        ["inspirador", "divertido", "profissional"])
+    tom = st.selectbox("🎭 Tom do Post", ["inspirador", "divertido", "profissional"])
 
 tema = st.text_input("💡 Tema do Post",
     placeholder="Ex: dica de produtividade, empreendedorismo, motivação...")
@@ -90,93 +88,69 @@ with st.expander("⚙️ Parâmetros do Modelo Transformers"):
     st.markdown("Controle o comportamento do modelo GPT-2:")
     col3, col4 = st.columns(2)
     with col3:
-        temperatura = st.slider(
-            "🌡️ Temperatura (Criatividade)",
-            min_value=0.5, max_value=1.4, value=0.9, step=0.05,
-            help="Controla a aleatoriedade da geração. Alto = mais criativo."
-        )
-        max_tokens = st.slider(
-            "📏 Máx. de Tokens",
-            min_value=40, max_value=200, value=100, step=10,
-            help="Quantidade máxima de palavras geradas pelo modelo."
-        )
+        temperatura = st.slider("🌡️ Temperatura (Criatividade)",
+            0.5, 1.4, 0.9, 0.05,
+            help="Alto = mais criativo e imprevisível.")
+        max_tokens = st.slider("📏 Máx. de Tokens",
+            40, 200, 100, 10,
+            help="Quantidade máxima de palavras geradas.")
     with col4:
-        top_p = st.slider(
-            "🎲 Top-P (Diversidade)",
-            min_value=0.5, max_value=1.0, value=0.92, step=0.02,
-            help="Nucleus sampling: controla variedade do vocabulário."
-        )
-        repetition_penalty = st.slider(
-            "🔁 Penalidade de Repetição",
-            min_value=1.0, max_value=2.0, value=1.3, step=0.1,
-            help="Evita que o modelo repita as mesmas palavras."
-        )
+        top_p = st.slider("🎲 Top-P (Diversidade)",
+            0.5, 1.0, 0.92, 0.02,
+            help="Nucleus sampling: variedade de vocabulário.")
+        repetition_penalty = st.slider("🔁 Penalidade de Repetição",
+            1.0, 2.0, 1.3, 0.1,
+            help="Evita repetição de palavras.")
 
-# ── Prompts por rede e tom ────────────────────────────────────────────────────
+# ── Prompt por rede e tom ─────────────────────────────────────────────────────
 def montar_prompt(tema, rede, tom):
     templates = {
         "Instagram": {
-            "inspirador":    f"Post inspirador para Instagram sobre {tema}:\n\n✨",
-            "divertido":     f"Post divertido para Instagram sobre {tema}:\n\n😄",
-            "profissional":  f"Post profissional para Instagram sobre {tema}:\n\n📌",
+            "inspirador":   f"Post inspirador para Instagram sobre {tema}:\n\n✨",
+            "divertido":    f"Post divertido para Instagram sobre {tema}:\n\n😄",
+            "profissional": f"Post profissional para Instagram sobre {tema}:\n\n📌",
         },
         "Twitter/X": {
-            "inspirador":    f"Tweet inspirador sobre {tema}:\n\n🧵",
-            "divertido":     f"Tweet engraçado sobre {tema}:\n\n😂",
-            "profissional":  f"Tweet profissional sobre {tema}:\n\n💼",
+            "inspirador":   f"Tweet inspirador sobre {tema}:\n\n🧵",
+            "divertido":    f"Tweet engraçado sobre {tema}:\n\n😂",
+            "profissional": f"Tweet profissional sobre {tema}:\n\n💼",
         },
         "LinkedIn": {
-            "inspirador":    f"Post inspirador para LinkedIn sobre {tema}:\n\n🚀",
-            "divertido":     f"Post leve para LinkedIn sobre {tema}:\n\n😊",
-            "profissional":  f"Post formal para LinkedIn sobre {tema}:\n\n📊",
+            "inspirador":   f"Post inspirador para LinkedIn sobre {tema}:\n\n🚀",
+            "divertido":    f"Post leve para LinkedIn sobre {tema}:\n\n😊",
+            "profissional": f"Post formal para LinkedIn sobre {tema}:\n\n📊",
         },
     }
     return templates.get(rede, {}).get(tom, f"Post sobre {tema}:\n\n")
 
-# ── Chamada à Hugging Face Inference API ─────────────────────────────────────
+# ── Chamada via InferenceClient (huggingface_hub oficial) ─────────────────────
 def gerar_post_hf(prompt, token, temperatura, max_tokens, top_p, repetition_penalty):
     """
-    Chama a Hugging Face Inference API para gerar texto com o modelo GPT-2 Portuguese.
-    Esta é a forma de usar Hugging Face Transformers sem instalar torch localmente.
-    O modelo roda nos servidores do Hugging Face.
+    Usa o InferenceClient da biblioteca huggingface_hub para chamar
+    o modelo GPT-2 Portuguese rodando nos servidores do Hugging Face.
+    Esta é a abordagem oficial de usar Hugging Face Transformers em produção.
     """
     MODEL_ID = "pierreguillou/gpt2-small-portuguese"
-    API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
 
-    headers = {"Authorization": f"Bearer {token}"}
+    client = InferenceClient(model=MODEL_ID, token=token)
 
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens":      max_tokens,
-            "temperature":         temperatura,
-            "top_p":               top_p,
-            "repetition_penalty":  repetition_penalty,
-            "do_sample":           True,
-            "return_full_text":    False,   # retorna só o texto NOVO (sem o prompt)
-        },
-        "options": {
-            "wait_for_model": True   # aguarda se o modelo estiver em cold start
-        }
-    }
+    resultado = client.text_generation(
+        prompt,
+        max_new_tokens=max_tokens,
+        temperature=temperatura,
+        top_p=top_p,
+        repetition_penalty=repetition_penalty,
+        do_sample=True,
+        return_full_text=False,  # retorna apenas o texto novo, sem o prompt
+    )
 
-    response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+    texto = resultado.strip()
 
-    if response.status_code == 200:
-        resultado = response.json()
-        if isinstance(resultado, list) and len(resultado) > 0:
-            texto = resultado[0].get("generated_text", "").strip()
-            # Limpeza: corta em parágrafo duplo
-            if "\n\n" in texto:
-                texto = texto.split("\n\n")[0]
-            return texto
-        return "Não foi possível gerar o texto."
-    elif response.status_code == 503:
-        return "⏳ Modelo em inicialização (cold start). Aguarde 20 segundos e tente novamente."
-    elif response.status_code == 401:
-        return "❌ Token inválido. Verifique seu Hugging Face Token."
-    else:
-        return f"❌ Erro {response.status_code}: {response.text}"
+    # Limpeza: corta no primeiro parágrafo duplo
+    if "\n\n" in texto:
+        texto = texto.split("\n\n")[0]
+
+    return texto
 
 # ── Botão e lógica de geração ─────────────────────────────────────────────────
 st.markdown("")
@@ -191,28 +165,38 @@ if gerar:
         prompt = montar_prompt(tema, rede_social, tom)
 
         with st.spinner("🤖 O modelo GPT-2 Portuguese está gerando seu post..."):
-            resultado = gerar_post_hf(
-                prompt=prompt,
-                token=hf_token,
-                temperatura=temperatura,
-                max_tokens=max_tokens,
-                top_p=top_p,
-                repetition_penalty=repetition_penalty
-            )
+            try:
+                resultado = gerar_post_hf(
+                    prompt=prompt,
+                    token=hf_token,
+                    temperatura=temperatura,
+                    max_tokens=max_tokens,
+                    top_p=top_p,
+                    repetition_penalty=repetition_penalty,
+                )
 
-        if resultado.startswith("❌") or resultado.startswith("⏳"):
-            st.warning(resultado)
-        else:
-            st.success("✅ Post gerado com sucesso!")
-            st.markdown("### 📋 Resultado")
-            st.markdown(f'<div class="badge">{rede_social} • {tom} • GPT-2 Portuguese</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="post-box">{resultado}</div>', unsafe_allow_html=True)
-            st.code(resultado, language=None)
+                if not resultado:
+                    st.warning("O modelo retornou um texto vazio. Tente outro tema ou ajuste os parâmetros.")
+                else:
+                    st.success("✅ Post gerado com sucesso!")
+                    st.markdown("### 📋 Resultado")
+                    st.markdown(f'<div class="badge">{rede_social} • {tom} • GPT-2 Portuguese</div>',
+                        unsafe_allow_html=True)
+                    st.markdown(f'<div class="post-box">{resultado}</div>', unsafe_allow_html=True)
+                    st.code(resultado, language=None)
 
-            # Exibe o prompt usado (transparência do modelo)
-            with st.expander("🔍 Ver prompt enviado ao modelo"):
-                st.code(prompt + resultado, language=None)
-                st.caption("O modelo recebeu o prompt acima e gerou o texto em continuação — isso é como funciona a geração de texto com Transformers.")
+                    with st.expander("🔍 Ver prompt enviado ao modelo"):
+                        st.code(prompt + resultado, language=None)
+                        st.caption("O modelo recebeu o prompt e completou o texto — assim funciona geração com Transformers.")
+
+            except Exception as e:
+                erro = str(e)
+                if "401" in erro or "authorization" in erro.lower():
+                    st.error("❌ Token inválido. Verifique seu Hugging Face Token.")
+                elif "503" in erro or "loading" in erro.lower():
+                    st.warning("⏳ Modelo em cold start. Aguarde 30 segundos e tente novamente.")
+                else:
+                    st.error(f"❌ Erro ao chamar o modelo: {erro}")
 
 # ── Histórico ─────────────────────────────────────────────────────────────────
 if "historico" not in st.session_state:
