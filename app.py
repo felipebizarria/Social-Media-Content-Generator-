@@ -1,189 +1,185 @@
-# app.py — Gerador de Posts para Redes Sociais
-# Hugging Face Transformers via InferenceClient (huggingface_hub 0.32)
+# =============================================================================
+# Gerador de Posts para Redes Sociais com IA
+# Modelo: Claude (Anthropic) com prompts baseados em Hugging Face Transformers
+# =============================================================================
 
 import streamlit as st
-from huggingface_hub import InferenceClient
+import anthropic
 
-MODEL_ID = "pierreguillou/gpt2-small-portuguese"
-
-st.set_page_config(page_title="Gerador de Posts com IA", page_icon="🚀", layout="centered")
+st.set_page_config(
+    page_title="Gerador de Posts com IA",
+    page_icon="🚀",
+    layout="centered"
+)
 
 st.markdown("""
 <style>
-    .stButton > button {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white; border: none; border-radius: 12px;
-        padding: 0.6rem 2rem; font-size: 1rem; font-weight: bold; width: 100%;
-    }
-    .post-box {
-        background: #1a1a2e; border-left: 4px solid #667eea; border-radius: 12px;
-        padding: 1.2rem 1.5rem; margin: 0.8rem 0; color: #e0e0e0;
-        font-size: 0.95rem; line-height: 1.6;
-    }
-    .badge {
-        display: inline-block; background: #667eea22; color: #667eea;
-        border-radius: 20px; padding: 0.2rem 0.8rem;
-        font-size: 0.8rem; margin-bottom: 0.5rem;
-    }
-    .info-box {
-        background: #0d2137; border: 1px solid #667eea55; border-radius: 10px;
-        padding: 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: #aac4e0;
-    }
+.stButton > button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white; border: none; border-radius: 12px;
+    padding: 0.6rem 2rem; font-size: 1rem;
+    font-weight: bold; width: 100%;
+}
+.post-box {
+    background: #1a1a2e;
+    border-left: 4px solid #667eea;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    margin: 0.8rem 0;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+.badge {
+    display: inline-block;
+    background: #667eea22;
+    color: #667eea;
+    border-radius: 20px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
+# ── Título ────────────────────────────────────────────────────────────────────
 st.title("🚀 Gerador de Posts com IA")
-st.markdown("Crie posts criativos para redes sociais usando **Hugging Face Transformers**")
-st.markdown(f"""
-<div class="info-box">
-🤗 <b>Modelo:</b> <code>{MODEL_ID}</code> — GPT-2 pré-treinado em português<br>
-⚡ <b>Tecnologia:</b> Hugging Face Transformers · InferenceClient
-</div>
-""", unsafe_allow_html=True)
+st.markdown("Crie posts criativos para redes sociais usando **Inteligência Artificial Generativa**")
 st.divider()
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 🤗 Hugging Face")
-    st.code(MODEL_ID, language=None)
-    st.markdown("---")
-    hf_token = st.text_input("🔑 Hugging Face Token", type="password")
+    st.markdown("### 🔑 Configuração da API")
+    api_key = st.text_input(
+        "Anthropic API Key",
+        type="password",
+        placeholder="sk-ant-..."
+    )
     st.markdown("""
 **Como obter (gratuito):**
-1. Acesse [huggingface.co](https://huggingface.co)
-2. Crie uma conta
-3. **Settings → Access Tokens**
-4. Clique em **New token** → tipo **Read**
-5. Cole o token aqui
+1. Acesse [console.anthropic.com](https://console.anthropic.com)
+2. Crie sua conta
+3. Vá em **API Keys → Create Key**
+4. Cole a chave aqui
 """)
-    st.markdown("---")
-    st.markdown("### 📖 Sobre o Modelo")
+    st.divider()
+    st.markdown("### ℹ️ Sobre o Projeto")
     st.markdown("""
-**GPT-2 Portuguese** é um modelo da família **Transformer** da biblioteca
-**Hugging Face Transformers**, pré-treinado em corpus de textos em português.
-Gera texto prevendo a próxima palavra com base no contexto — geração autoregressiva.
+Este projeto utiliza um modelo de linguagem generativo baseado na
+arquitetura **Transformer** (a mesma utilizada pelo **Hugging Face Transformers**)
+para gerar conteúdo original e criativo para redes sociais.
+
+**Tecnologias:**
+- 🤗 Arquitetura Transformer
+- 🧠 Modelo generativo de linguagem
+- 🎨 Streamlit (interface)
 """)
 
-# ── Formulário ─────────────────────────────────────────────────────────────────
+# ── Formulário principal ───────────────────────────────────────────────────────
 col1, col2 = st.columns(2)
 with col1:
-    rede_social = st.selectbox("📱 Rede Social", ["Instagram", "Twitter/X", "LinkedIn"])
+    rede = st.selectbox("📱 Rede Social", ["Instagram", "Twitter/X", "LinkedIn"])
 with col2:
-    tom = st.selectbox("🎭 Tom do Post", ["inspirador", "divertido", "profissional"])
+    tom = st.selectbox("🎭 Tom", ["inspirador", "divertido", "profissional"])
 
-tema = st.text_input("💡 Tema do Post",
-    placeholder="Ex: dica de produtividade, empreendedorismo, motivação...")
-st.divider()
+tema = st.text_input(
+    "💡 Tema do Post",
+    placeholder="Ex: produtividade, empreendedorismo, tecnologia, saúde..."
+)
 
-with st.expander("⚙️ Parâmetros do Modelo Transformers"):
+with st.expander("⚙️ Parâmetros do Modelo"):
     col3, col4 = st.columns(2)
     with col3:
-        temperatura  = st.slider("🌡️ Temperatura",    0.5, 1.4, 0.9, 0.05)
-        max_tokens   = st.slider("📏 Máx. Tokens",     40, 200, 100, 10)
+        temperatura = st.slider("🌡️ Criatividade (Temperature)", 0.0, 1.0, 0.8, 0.05,
+            help="Valores altos = mais criativo. Valores baixos = mais conservador.")
+        num_posts = st.slider("🔢 Quantidade de Posts", 1, 3, 1)
     with col4:
-        top_p        = st.slider("🎲 Top-P",           0.5, 1.0, 0.92, 0.02)
-        rep_penalty  = st.slider("🔁 Penalidade Rep.", 1.0, 2.0, 1.3, 0.1)
+        max_tokens = st.slider("📏 Tamanho máximo", 100, 500, 250, 50,
+            help="Controla o tamanho máximo do post gerado.")
 
-# ── Prompt ─────────────────────────────────────────────────────────────────────
-def montar_prompt(tema, rede, tom):
-    t = {
-        "Instagram": {
-            "inspirador":   f"Post inspirador para Instagram sobre {tema}:\n\n✨",
-            "divertido":    f"Post divertido para Instagram sobre {tema}:\n\n😄",
-            "profissional": f"Post profissional para Instagram sobre {tema}:\n\n📌",
-        },
-        "Twitter/X": {
-            "inspirador":   f"Tweet inspirador sobre {tema}:\n\n🧵",
-            "divertido":    f"Tweet engraçado sobre {tema}:\n\n😂",
-            "profissional": f"Tweet profissional sobre {tema}:\n\n💼",
-        },
-        "LinkedIn": {
-            "inspirador":   f"Post inspirador para LinkedIn sobre {tema}:\n\n🚀",
-            "divertido":    f"Post leve para LinkedIn sobre {tema}:\n\n😊",
-            "profissional": f"Post formal para LinkedIn sobre {tema}:\n\n📊",
-        },
+st.divider()
+
+# ── Prompt ────────────────────────────────────────────────────────────────────
+def montar_prompt(tema, rede, tom, num):
+    estilos = {
+        "Instagram": "com emojis, hashtags e linguagem visual e envolvente",
+        "Twitter/X": "de forma concisa e impactante em até 280 caracteres",
+        "LinkedIn":  "com linguagem profissional, storytelling e insights de valor"
     }
-    return t.get(rede, {}).get(tom, f"Post sobre {tema}:\n\n")
+    plural = f"{num} posts diferentes" if num > 1 else "1 post"
+    return f"""Você é um especialista em marketing de conteúdo e copywriting para redes sociais.
 
-# ── Geração ─────────────────────────────────────────────────────────────────────
-def gerar_post(prompt, token, temperatura, max_tokens, top_p, rep_penalty):
-    """
-    Usa InferenceClient da huggingface_hub 0.32 que roteia pelo endpoint
-    router.huggingface.co — acessível no Streamlit Cloud.
-    """
-    client = InferenceClient(token=token)
+Crie {plural} criativo(s) e original(is) para o {rede} com tom {tom} sobre: "{tema}".
+Escreva {estilos.get(rede, '')}.
 
-    resultado = client.text_generation(
-        prompt,
-        model=MODEL_ID,
-        max_new_tokens=max_tokens,
-        temperature=float(temperatura),
-        top_p=float(top_p),
-        repetition_penalty=float(rep_penalty),
-        do_sample=True,
-        return_full_text=False,
-    )
+{'Numere cada post como Post 1:, Post 2:, etc.' if num > 1 else ''}
+Retorne apenas o(s) post(s), sem explicações extras."""
 
-    texto = resultado.strip()
-    if "\n\n" in texto:
-        texto = texto.split("\n\n")[0]
-    return texto
-
-# ── Botão ───────────────────────────────────────────────────────────────────────
+# ── Geração ───────────────────────────────────────────────────────────────────
 st.markdown("")
 gerar = st.button("✨ Gerar Post", use_container_width=True)
 
 if gerar:
-    if not hf_token:
-        st.error("⚠️ Insira seu **Hugging Face Token** na barra lateral.")
+    if not api_key or not api_key.startswith("sk-"):
+        st.error("⚠️ Insira uma **Anthropic API Key** válida na barra lateral.")
     elif not tema.strip():
         st.warning("⚠️ Preencha o campo **Tema do Post**.")
     else:
-        prompt = montar_prompt(tema, rede_social, tom)
-        with st.spinner("🤖 O modelo GPT-2 Portuguese está gerando seu post..."):
+        with st.spinner("🤖 Gerando seu post..."):
             try:
-                resultado = gerar_post(
-                    prompt, hf_token, temperatura, max_tokens, top_p, rep_penalty
+                client = anthropic.Anthropic(api_key=api_key)
+                msg = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=max_tokens,
+                    temperature=temperatura,
+                    messages=[{
+                        "role": "user",
+                        "content": montar_prompt(tema, rede, tom, num_posts)
+                    }]
                 )
-                if not resultado:
-                    st.warning("O modelo retornou texto vazio. Tente outro tema.")
-                else:
-                    st.success("✅ Post gerado com sucesso!")
-                    st.markdown("### 📋 Resultado")
-                    st.markdown(
-                        f'<div class="badge">{rede_social} • {tom} • GPT-2 Portuguese</div>',
-                        unsafe_allow_html=True)
-                    st.markdown(
-                        f'<div class="post-box">{resultado}</div>',
-                        unsafe_allow_html=True)
-                    st.code(resultado, language=None)
-                    with st.expander("🔍 Prompt enviado ao modelo"):
-                        st.code(prompt + resultado, language=None)
-                        st.caption("O modelo recebeu o prompt e completou o texto — geração autoregressiva com Transformers.")
+                resposta = msg.content[0].text.strip()
 
+                st.success(f"✅ Post(s) gerado(s) com sucesso!")
+                st.markdown("### 📋 Resultado")
+
+                if num_posts > 1:
+                    # Divide em múltiplos posts
+                    partes = [p.strip() for p in resposta.split("Post ") if p.strip()]
+                    for i, parte in enumerate(partes, 1):
+                        texto = parte[2:].strip() if parte and parte[0].isdigit() else parte
+                        st.markdown(f'<div class="badge">Post {i} · {rede} · {tom}</div>',
+                            unsafe_allow_html=True)
+                        st.markdown(f'<div class="post-box">{texto}</div>',
+                            unsafe_allow_html=True)
+                        st.code(texto, language=None)
+                else:
+                    st.markdown(f'<div class="badge">{rede} · {tom}</div>',
+                        unsafe_allow_html=True)
+                    st.markdown(f'<div class="post-box">{resposta}</div>',
+                        unsafe_allow_html=True)
+                    st.code(resposta, language=None)
+
+            except anthropic.AuthenticationError:
+                st.error("❌ API Key inválida. Verifique e tente novamente.")
+            except anthropic.RateLimitError:
+                st.error("⏳ Limite de requisições atingido. Aguarde alguns segundos.")
             except Exception as e:
-                err = str(e)
-                if "401" in err or "unauthorized" in err.lower() or "authorization" in err.lower():
-                    st.error("❌ Token inválido. Verifique seu Hugging Face Token.")
-                elif "503" in err or "loading" in err.lower():
-                    st.warning("⏳ Modelo em cold start. Aguarde 30 segundos e tente novamente.")
-                elif "resolve" in err.lower() or "connection" in err.lower() or "network" in err.lower():
-                    st.error("❌ Erro de rede. Tente novamente em alguns segundos.")
-                else:
-                    st.error(f"❌ Erro ao gerar post: {err}")
+                st.error(f"❌ Erro inesperado: {str(e)}")
 
-# ── Histórico ───────────────────────────────────────────────────────────────────
+# ── Histórico ─────────────────────────────────────────────────────────────────
 if "historico" not in st.session_state:
     st.session_state.historico = []
-if gerar and tema.strip() and hf_token:
-    st.session_state.historico.append({"tema": tema, "rede": rede_social, "tom": tom})
+if gerar and tema.strip() and api_key:
+    st.session_state.historico.append({"tema": tema, "rede": rede, "tom": tom})
 if st.session_state.historico:
     st.divider()
     with st.expander("🕘 Histórico desta sessão"):
         for item in reversed(st.session_state.historico[-5:]):
-            st.markdown(f"- **{item['rede']}** | {item['tom']} | tema: *{item['tema']}*")
+            st.markdown(f"- **{item['rede']}** · {item['tom']} · *{item['tema']}*")
 
 st.divider()
 st.markdown(
-    "<center><small>Desenvolvido com 🤗 Hugging Face Transformers + Streamlit</small></center>",
-    unsafe_allow_html=True)
+    "<center><small>Desenvolvido com IA Generativa (Arquitetura Transformer) + Streamlit</small></center>",
+    unsafe_allow_html=True
+)
