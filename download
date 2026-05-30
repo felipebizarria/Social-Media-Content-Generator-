@@ -1,0 +1,19 @@
+# Ambientes virtuais Python
+venv/
+env/
+.env/
+__pycache__/
+*.pyc
+
+# Cache do Hugging Face (modelos baixados localmente)
+# NÃO subir pro GitHub — são arquivos grandes (centenas de MB)
+.cache/
+~/.cache/huggingface/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de configuração local
+*.env
+.env.local
