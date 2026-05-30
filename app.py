@@ -82,16 +82,6 @@ def carregar_tokenizer():
 with st.sidebar:
     st.markdown("### 🔑 Configuração")
     groq_key = st.text_input("Groq API Key", type="password", placeholder="gsk_...")
-    st.markdown("""
-**Como obter (gratuito):**
-1. Acesse [console.groq.com](https://console.groq.com)
-2. Crie conta (Google ou GitHub)
-3. **API Keys → Create API Key**
-4. Cole aqui (começa com `gsk_`)
-
-✅ Sem cartão de crédito
-✅ 100 requisições/dia grátis
-""")
     st.divider()
     st.markdown("### 🤗 Hugging Face Transformers")
     st.markdown(f"""
