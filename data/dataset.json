@@ -1,0 +1,79 @@
+{
+  "descricao": "Dataset de posts para redes sociais em português brasileiro. Usado para few-shot prompting — exemplos reais que guiam o modelo a gerar conteúdo no estilo correto para cada rede social e tom.",
+  "versao": "1.0",
+  "total_exemplos": 12,
+  "exemplos": [
+    {
+      "rede": "Instagram",
+      "tom": "inspirador",
+      "tema": "produtividade",
+      "post": "✨ Produtividade não é sobre fazer mais — é sobre fazer o que importa.\n\nComece o dia com 3 prioridades. Apenas 3.\n\nQuando você sabe onde focar, os resultados aparecem naturalmente. 💪\n\n#produtividade #focoemresultados #desenvolvimentopessoal #rotina #sucesso"
+    },
+    {
+      "rede": "Instagram",
+      "tom": "divertido",
+      "tema": "produtividade",
+      "post": "😂 Minha produtividade hoje:\n\n☕ Café número 1 — vou começar agora\n☕ Café número 2 — agora vai de verdade\n☕ Café número 3 — já tô quase\n☕ Café número 4 — reorganizei minha mesa\n\nAlguém mais assim? 👇\n\n#trabalho #home office #produtividade #humor #vidaReal"
+    },
+    {
+      "rede": "Instagram",
+      "tom": "profissional",
+      "tema": "produtividade",
+      "post": "📌 3 técnicas comprovadas para aumentar sua produtividade:\n\n1. Técnica Pomodoro — 25 min de foco, 5 min de pausa\n2. Método GTD — capture tudo, processe depois\n3. Regra dos 2 minutos — se leva menos de 2 min, faça agora\n\nImplementar uma por semana já transforma sua rotina.\n\n#gestaodetempo #produtividade #carreira #metodologia #eficiencia"
+    },
+    {
+      "rede": "Twitter/X",
+      "tom": "inspirador",
+      "tema": "empreendedorismo",
+      "post": "🧵 Todo grande negócio começou com alguém que não sabia se ia funcionar, mas tentou mesmo assim.\n\nA dúvida é normal. A ação é o diferencial."
+    },
+    {
+      "rede": "Twitter/X",
+      "tom": "divertido",
+      "tema": "empreendedorismo",
+      "post": "😂 Empreendedor iniciante: \"Vou trabalhar de onde quiser!\"\n\nEmpreendedor 1 ano depois: trabalha de casa, do café, do médico, das férias e às 23h de domingo."
+    },
+    {
+      "rede": "Twitter/X",
+      "tom": "profissional",
+      "tema": "empreendedorismo",
+      "post": "💼 Dado importante: 90% das startups falham nos primeiros 5 anos.\n\nO diferencial das que sobrevivem: validação antes de escala.\n\nConheça seu cliente antes de construir o produto."
+    },
+    {
+      "rede": "LinkedIn",
+      "tom": "inspirador",
+      "tema": "carreira",
+      "post": "🚀 Há 3 anos eu fui demitido. Parecia o fim.\n\nHoje tenho minha própria empresa com 8 colaboradores.\n\nO que aprendi: demissão não é fracasso — às vezes é o empurrão que você precisava para construir algo seu.\n\nQual foi o momento difícil que se tornou uma virada na sua carreira? Conta aqui nos comentários 👇\n\n#carreira #empreendedorismo #resiliencia #crescimento"
+    },
+    {
+      "rede": "LinkedIn",
+      "tom": "divertido",
+      "tema": "carreira",
+      "post": "😊 Verdades que aprendi no mercado de trabalho:\n\n✔️ Reunião que poderia ser e-mail existe\n✔️ Toda entrega urgente vira entrega mais urgente ainda\n✔️ O prazo real sempre vem depois do prazo \"real\"\n\nMas também aprendi que as melhores ideias surgem justamente no caos.\n\nConcordam? 😄\n\n#carreira #trabalho #humor #cultura #escritorio"
+    },
+    {
+      "rede": "LinkedIn",
+      "tom": "profissional",
+      "tema": "carreira",
+      "post": "📊 O mercado mudou. As habilidades mais valorizadas em 2024 não são as mesmas de 5 anos atrás.\n\nAs 3 competências que mais vejo sendo buscadas:\n\n1. Inteligência de dados — entender números e tomar decisões\n2. Comunicação estratégica — transmitir ideias com clareza\n3. Adaptabilidade — aprender rápido em ambientes de mudança\n\nVocê está desenvolvendo essas habilidades?\n\n#mercadodetrabalho #habilidades #desenvolvimento #rh #lideranca"
+    },
+    {
+      "rede": "Instagram",
+      "tom": "inspirador",
+      "tema": "saude mental",
+      "post": "🌱 Cuidar da sua saúde mental não é fraqueza — é inteligência emocional.\n\nVocê não precisa estar \"quebrado\" para buscar ajuda.\n\nPausa, respira, cuida de você. O mundo pode esperar.\n\n💚 #saudemental #autocuidado #bemestar #saude #mindfulness"
+    },
+    {
+      "rede": "Twitter/X",
+      "tom": "inspirador",
+      "tema": "tecnologia",
+      "post": "🧵 A IA não vai substituir humanos.\n\nVai substituir humanos que não sabem usar IA.\n\nAprenda. Adapte. Avance."
+    },
+    {
+      "rede": "LinkedIn",
+      "tom": "profissional",
+      "tema": "tecnologia",
+      "post": "📊 A transformação digital não é sobre tecnologia — é sobre pessoas.\n\nEmpresas que falharam na digitalização não falharam por falta de ferramentas. Falharam por falta de cultura.\n\nA tecnologia é o veículo. A mudança de mentalidade é o combustível.\n\nComo sua empresa está preparando as pessoas para essa jornada?\n\n#transformacaodigital #tecnologia #inovacao #cultura #gestao"
+    }
+  ]
+}
